@@ -6,7 +6,7 @@ file_set = os.listdir('data/')
 
 for f in file_set:
     print(f)
-    im = Image.open('data/{}'.format(f)).convert('1')
+    im = Image.open('data/{}'.format(f))
     pixels = list(im.getdata())
     width, height = im.size
     pixels = [pixels[i * width:(i + 1) * width] for i in range(height)]

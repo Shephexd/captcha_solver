@@ -1,26 +1,37 @@
 import os
-from PIL import Image
+import scipy.misc
 import numpy as np
 
-file_set = os.listdir('data/')
 
-for f in file_set:
-    print(f)
-    im = Image.open('data/{}'.format(f))
-    pixels = list(im.getdata())
-    width, height = im.size
-    pixels = [pixels[i * width:(i + 1) * width] for i in range(height)]
-    print(pixels)
-    print(np.size(pixels))
-    print(im.getdata())
-    print(im.size)
-    x_data = np.array(pixels)
-    print(x_data)
-    num = f.split('.')[0]
-    y_data = np.zeros((5, 10))
-    for n, i in enumerate(num):
-        y_data[n][i] = 1
+def get_data(debug=False):
+    file_set = os.listdir('data/')
 
-    print(num)
-    print(y_data)
-    im.save('output2.png')
+    x_data = list()
+    y_data = list()
+
+    for f in file_set:
+        im = scipy.misc.imread('data/{}'.format(f), flatten=False, mode='RGB')
+        ims = scipy.misc.imresize(im,(60, 160, 3))
+        x_data.append(ims)
+        num = f.split('.')[0]
+        N = len(num)
+        y = np.zeros((N, 10))
+        for n, i in enumerate(num):
+            y[n][int(i)] = 1
+
+        y_data.append(y)
+
+    if debug:
+        print(x_data.shape)
+        print(y_data.shape)
+
+    x_data = np.array(x_data)
+    y_data = np.array(y_data)
+
+    # return numpy array
+    return x_data, y_data
+
+if __name__ == '__main__':
+    (X, Y) = get_data()
+    print(X.shape)
+    print(Y.shape)

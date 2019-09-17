@@ -1,8 +1,8 @@
 import tensorflow as tf
 
 
-X = tf.placeholder(tf.float32, shape=(None, 60, 160, 3))
-y = tf.placeholder(tf.float32, shape=(None, 5, 10))
+X = tf.placeholder(tf.float64, shape=(None, 60, 160, 3))
+y = tf.placeholder(tf.float64, shape=(None, 5, 10))
 conv1 = tf.layers.conv2d(inputs=X,
                         filters=32,
                         kernel_size=[5, 5],

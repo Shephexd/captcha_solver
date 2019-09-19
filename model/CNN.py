@@ -9,34 +9,42 @@ class ConvNet:
         self.graph = tf.Graph()
         self.build_graph()
         self.sess = None
+        self.data_iter = None
     
     @property
     def is_runnable(self):
         return bool(self.sess)
     
     def build_graph(self):
-        with self.graph.as_default():            
-            inputs = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='inputs')
-            labels = tf.placeholder(tf.float64, shape=(None, 5, 10), name='labels')
+        with self.graph.as_default():
+            batch_size_placeholder = tf.placeholder(tf.int64, name='batch_size')
+
+            x_placeholder = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='inputs')
+            y_placeholder = tf.placeholder(tf.double, shape=(None, 5, 10), name='labels')
+            
+            train_dataset = tf.data.Dataset.from_tensor_slices(tensors=(x_placeholder, y_placeholder))
+            train_batch_dataset = train_dataset.batch(batch_size_placeholder).repeat()
+            self.train_data_iter = train_batch_dataset.make_initializable_iterator(shared_name='train_data_iter')
+            feature, labels = self.train_data_iter.get_next()
             
             learning_rate = tf.placeholder(tf.float64, name='learning_rate')
             dropout_rate = tf.placeholder(tf.float64, name='dropout_rate')
             
-            conv1 = tf.layers.conv2d(inputs=inputs,
+            conv1 = tf.layers.conv2d(inputs=feature,
                         filters=32,
                         kernel_size=[5, 5],
                         padding='same',
                         name='conv1',
                         activation=tf.nn.relu)
-            pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2, name='pool1')
+            pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[4, 4], strides=4, name='pool1')
             
             conv2 = tf.layers.conv2d(inputs=pool1,
                         filters=64,
                         kernel_size=[5, 5],
                         padding='same',
                         activation=tf.nn.relu)
-            pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
-            pool2_flat = tf.reshape(pool2, [-1, 15 * 40 * 64])
+            pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[5, 5], strides=5)
+            pool2_flat = tf.reshape(pool2, [-1, 3 * 8 * 64])
             
             dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
             dropout = tf.layers.dropout(inputs=dense, rate=dropout_rate, training=True)
@@ -54,25 +62,42 @@ class ConvNet:
         loss = tf.reduce_sum(cross_entropy, name='loss')
         return loss
     
-    def train(self, X, y, learning_rate=0.001, dropout_rate=0.4):
+    def train(self, X, y, learning_rate=0.001, dropout_rate=0.4, epoch=10, batch_size=8):
         with self.graph.as_default():
+            n_batch = X.shape[0] / batch_size
             self.sess = tf.Session()
-
-            init = tf.global_variables_initializer()
-
+            
             x_placeholder = self.graph.get_tensor_by_name('inputs:0')
             y_placeholder = self.graph.get_tensor_by_name('labels:0')
+
+            init = tf.global_variables_initializer()
+            bs = self.graph.get_tensor_by_name('batch_size:0')
             lr = self.graph.get_tensor_by_name('learning_rate:0')
             dr = self.graph.get_tensor_by_name('dropout_rate:0')
-
+            
             training_step = cnn.graph.get_operation_by_name('training_step')
             loss = cnn.graph.get_tensor_by_name('loss:0')
 
             self.sess.run(init)
-            for i in range(10):
-                _, cost = self.sess.run([training_step, loss], feed_dict={x_placeholder: X, y_placeholder: y, lr: learning_rate, dr: dropout_rate})
-                print(cost)
+            self.sess.run(self.train_data_iter.initializer, 
+                          feed_dict={
+                              x_placeholder: X, 
+                              y_placeholder: y, 
+                              bs: batch_size})
+            
+            for i in range(epoch):
+                tot_cost = 0
+                for n in range(int(n_batch)):
+                    _, cost = self.sess.run([training_step, loss], 
+                                            feed_dict={
+                                                lr: learning_rate, 
+                                                dr: dropout_rate
+                                            })
+                    tot_cost += cost
+                    print("epoch:%d, batch: %d" % (i+1, n+1))
+                print("COST:", tot_cost/n_batch)
 
+    # TODO X input must be changed by tf.Dataset
     def predict(self, X, prob=False):
         assert self.is_runnable, "Model must be trained or loaded"
         with self.graph.as_default():

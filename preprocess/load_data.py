@@ -3,13 +3,13 @@ import scipy.misc
 import numpy as np
 
 
-def get_data(debug=False):
-    file_set = os.listdir('data/')
+def get_data(pardir, debug=False):
+    file_list = os.listdir(pardir)
 
     x_data = list()
     y_data = list()
 
-    for f in file_set:
+    for f in file_list:
         im = scipy.misc.imread('data/{}'.format(f), flatten=False, mode='RGB')
         ims = scipy.misc.imresize(im,(60, 160, 3))
         x_data.append(ims)
@@ -21,14 +21,9 @@ def get_data(debug=False):
 
         y_data.append(y)
 
-    if debug:
-        print(x_data.shape)
-        print(y_data.shape)
-
     x_data = np.array(x_data)
     y_data = np.array(y_data)
 
-    # return numpy array
     return x_data, y_data
 
 if __name__ == '__main__':

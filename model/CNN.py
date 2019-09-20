@@ -24,9 +24,16 @@ class ConvNet:
             
             train_dataset = tf.data.Dataset.from_tensor_slices(tensors=(x_placeholder, y_placeholder))
             train_batch_dataset = train_dataset.batch(batch_size_placeholder).repeat()
-            self.train_data_iter = train_batch_dataset.make_initializable_iterator(shared_name='train_data_iter')
-            feature, labels = self.train_data_iter.get_next()
+            train_dataset = tf.data.Dataset.from_tensor_slices(tensors=(x_placeholder, y_placeholder))
+            test_batch_dataset = train_dataset.batch(batch_size_placeholder)
             
+            iterator = tf.data.Iterator.from_structure(train_batch_dataset.output_types,
+                                                       train_batch_dataset.output_shapes)
+            feature, labels = iterator.get_next()
+            
+            self.train_iter_init_op = iterator.make_initializer(train_batch_dataset)
+            self.test_iter_init_op = iterator.make_initializer(test_batch_dataset)
+
             learning_rate = tf.placeholder(tf.float64, name='learning_rate')
             dropout_rate = tf.placeholder(tf.float64, name='dropout_rate')
             
@@ -79,7 +86,7 @@ class ConvNet:
             loss = cnn.graph.get_tensor_by_name('loss:0')
 
             self.sess.run(init)
-            self.sess.run(self.train_data_iter.initializer, 
+            self.sess.run(self.train_iter_init_op, 
                           feed_dict={
                               x_placeholder: X, 
                               y_placeholder: y, 
@@ -97,11 +104,18 @@ class ConvNet:
                     print("epoch:%d, batch: %d" % (i+1, n+1))
                 print("COST:", tot_cost/n_batch)
 
-    # TODO X input must be changed by tf.Dataset
-    def predict(self, X, prob=False):
+    def test_model(self, X, y, prob=False):
         assert self.is_runnable, "Model must be trained or loaded"
         with self.graph.as_default():
             x_placeholder = self.graph.get_tensor_by_name('inputs:0')
+            y_placeholder = self.graph.get_tensor_by_name('labels:0')
+            bs = self.graph.get_tensor_by_name('batch_size:0')
+            self.sess.run(self.test_iter_init_op, 
+                          feed_dict={
+                              x_placeholder: X, 
+                              y_placeholder: y,
+                              bs: 1})
+
             y_hat = self.graph.get_tensor_by_name('y_hat:0')
             dr = self.graph.get_tensor_by_name('dropout_rate:0')
             output = self.sess.run(tf.nn.softmax(y_hat, axis=2), feed_dict={x_placeholder: X, dr: np.double(0.0)})
@@ -121,6 +135,8 @@ if __name__ == '__main__':
     labels = label.reshape(-1, 5, 10)
 
     cnn = ConvNet()
-    cnn.train(inputs, labels)
-    y_hat = cnn.predict(inputs, prob=True)
-    print(y_hat)
+    cnn.train(inputs, labels, epoch=200, batch_size=128)
+    
+    SAMPLE_IDX = 0
+    print(y[SAMPLE_IDX].argmax(axis=1))
+    print(cnn.test_model(inputs[SAMPLE_IDX].reshape(-1, 60, 160, 3), inputs[SAMPLE_IDX].reshape(-1, 5, 10)))

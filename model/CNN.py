@@ -103,10 +103,34 @@ class ConvNet:
                     tot_cost += cost
                     print("epoch:%d, batch: %d" % (i+1, n+1))
                 print("COST:", tot_cost/n_batch)
+    
+    def predict(self, X, prob=False):
+        assert self.is_runnable, "Model must be trained or loaded"
+        with self.graph.as_default():
+            X = self.reshape_features(X)
+            y = np.zeros([X.shape[0], 5, 10])
 
+            x_placeholder = self.graph.get_tensor_by_name('inputs:0')
+            y_placeholder = self.graph.get_tensor_by_name('labels:0')
+            bs = self.graph.get_tensor_by_name('batch_size:0')
+            self.sess.run(self.test_iter_init_op, 
+                          feed_dict={
+                              x_placeholder: X, 
+                              y_placeholder: y,
+                              bs: 1})
+            
+            y_hat = self.graph.get_tensor_by_name('y_hat:0')
+            dr = self.graph.get_tensor_by_name('dropout_rate:0')
+            output = self.sess.run(y_hat, feed_dict={dr: np.double(0.0)})
+            if not prob:
+                return output.argmax(axis=2)
+            else:
+                return output
+    
     def test_model(self, X, y, prob=False):
         assert self.is_runnable, "Model must be trained or loaded"
         with self.graph.as_default():
+            X, y = self.reshape_inputs(X, y)
             x_placeholder = self.graph.get_tensor_by_name('inputs:0')
             y_placeholder = self.graph.get_tensor_by_name('labels:0')
             bs = self.graph.get_tensor_by_name('batch_size:0')
@@ -124,6 +148,26 @@ class ConvNet:
                 return output.argmax(axis=2)
             else:
                 return output
+    
+    def get_accuracy(self, labels, y_hat):
+        matched = (labels.argmax(axis=1) == y_hat)
+        y_hat.shape[1] == matched.sum(axis=1)
+        return labels == y_hat
+    
+    def reshape_inputs(self, X, y):
+        X = self.reshape_features(X)
+        y = self.reshape_labels(y)
+        return X, y
+    
+    def reshape_features(self, X):
+        if np.ndim(X) == 3:
+            X = X.reshape(-1, 60, 160, 3)
+        return X
+    
+    def reshape_labels(self, y):
+        if np.ndim(y) == 2:
+            y = y.reshape(-1, 5, 10)
+        return y
 
 
 if __name__ == '__main__':

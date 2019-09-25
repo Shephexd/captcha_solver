@@ -15,7 +15,7 @@ class AbsNeuralNetwork:
     def build_graph(self):
         with self.graph.as_default():
             pass
-    
+        
     def calc_cost(self, y_hat, labels):
         cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=y_hat, labels=labels)
         loss = tf.reduce_sum(cross_entropy, name='loss')
@@ -46,7 +46,17 @@ class AbsNeuralNetwork:
         return X, y
     
     def reshape_features(self, X):
+        if isinstance(X, list):
+            X = np.array(X)
+            
+        if np.ndim(X) == 3:
+            X = X.reshape(-1, 60, 160, 3)
         return X
     
     def reshape_labels(self, y):
+        if isinstance(y, list):
+            y = np.array(y)
+
+        if np.ndim(y) == 2:
+            y = y.reshape(-1, 5, 10)
         return y

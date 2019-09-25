@@ -24,8 +24,8 @@ class ConvNet:
             
             train_dataset = tf.data.Dataset.from_tensor_slices(tensors=(x_placeholder, y_placeholder))
             train_batch_dataset = train_dataset.batch(batch_size_placeholder).repeat()
-            train_dataset = tf.data.Dataset.from_tensor_slices(tensors=(x_placeholder, y_placeholder))
-            test_batch_dataset = train_dataset.batch(batch_size_placeholder)
+            test_dataset = tf.data.Dataset.from_tensor_slices(tensors=(x_placeholder, y_placeholder))
+            test_batch_dataset = test_dataset.batch(batch_size_placeholder)
             
             iterator = tf.data.Iterator.from_structure(train_batch_dataset.output_types,
                                                        train_batch_dataset.output_shapes)

@@ -1,11 +1,13 @@
+import numpy as np
 import tensorflow as tf
 
 
 class AbsNeuralNetwork:
-    def __init__(self):
-        self.graph = tf.Graph()
+    def __init__(self, graph, sess):
+        self.graph = graph
+        self.sess = sess
+        self.tf_nodes = dict()
         self.build_graph()
-        self.sess = None
         self.data_iter = None
 
     @property
@@ -21,7 +23,7 @@ class AbsNeuralNetwork:
         loss = tf.reduce_sum(cross_entropy, name='loss')
         return loss
     
-    def train(self, X, y, learning_rate=0.001, dropout_rate=0.4, epoch=10, batch_size=8):
+    def train(self, X, y, learning_rate=0.001, dropout_rate=0.4, epoch=10, batch_size=8, **kwargs):
         with self.graph.as_default():
             pass
         

@@ -1,4 +1,4 @@
-from model.network_template import AbsNeuralNetwork
+from model.v1.network_template import AbsNeuralNetwork
 import tensorflow as tf
 import numpy as np
 

@@ -1,8 +1,7 @@
-from model.network_template import AbsNeuralNetwork
-from model.gan.generator import CaptchaGenerator
-from model.gan.discriminator import CaptchaDiscriminator
+from model.v1.network_template import AbsNeuralNetwork
+from model.v1.gan.generator import CaptchaGenerator
+from model.v1.gan.discriminator import CaptchaDiscriminator
 import tensorflow as tf
-import numpy as np
 
 
 class CaptchaGenAdvNet(AbsNeuralNetwork):

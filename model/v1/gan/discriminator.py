@@ -1,6 +1,5 @@
-import numpy as np
 import tensorflow as tf
-from model.network_template import AbsNeuralNetwork
+from model.v1.network_template import AbsNeuralNetwork
 
 
 class CaptchaDiscriminator(AbsNeuralNetwork):

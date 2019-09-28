@@ -3,10 +3,7 @@ from model.v1.network_template import AbsNeuralNetwork
 
 
 class CaptchaDiscriminator(AbsNeuralNetwork):
-    def build_discriminator(self, features):
-        learning_rate = tf.placeholder(tf.float64, name='learning_rate')
-        dropout_rate = tf.placeholder(tf.float64, name='dropout_rate')
-
+    def build_discriminator(self, features, dropout_rate, learning_rate):
         conv1 = tf.layers.conv2d(inputs=features,
                                  filters=32,
                                  kernel_size=[5, 5],
@@ -20,15 +17,17 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
                                  filters=64,
                                  kernel_size=[5, 5],
                                  padding='same',
+                                 name='disc_conv2',
                                  activation=tf.nn.relu,
                                  reuse=tf.AUTO_REUSE)
-        pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[5, 5], strides=5)
+        pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[5, 5], strides=5, name='disc_pool2')
         pool2_flat = tf.reshape(pool2, [-1, 3 * 8 * 64])
 
-        dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu, reuse=tf.AUTO_REUSE)
-        dropout = tf.layers.dropout(inputs=dense, rate=dropout_rate, training=True)
+        dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
+        dropout = tf.layers.dropout(inputs=dense, rate=dropout_rate, name='disc_dropout', training=True)
 
-        logits = tf.layers.dense(inputs=dropout, units=1, )
+        logits = tf.layers.dense(inputs=dropout, units=1, name='disc_logits', reuse=tf.AUTO_REUSE)
+
         self.tf_nodes['learning_rate'] = learning_rate
         self.tf_nodes['dropout_rate'] = dropout_rate
         self.tf_nodes['conv1'] = conv1
@@ -52,7 +51,29 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
             lr = self.graph.get_tensor_by_name('learning_rate:0')
             dr = self.graph.get_tensor_by_name('dropout_rate:0')
 
-            training_step = cnn.graph.get_operation_by_name('training_step')
-            loss = cnn.graph.get_tensor_by_name('loss:0')
+            training_step = self.graph.get_operation_by_name('training_step')
+            loss = self.graph.get_tensor_by_name('loss:0')
 
 
+if __name__ == '__main__':
+    from preprocess.load_data import get_data
+
+    x, y = get_data(pardir='/Users/shephexd/Documents/github/captcha_solver/data')
+    print(x, y)
+
+    graph = tf.Graph()
+    sess = tf.Session(graph=graph)
+    discriminator = CaptchaDiscriminator(graph=graph, sess=sess)
+
+    with graph.as_default():
+        input_real = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='input_real')
+        input_fake = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='input_fake')
+        dropout_rate = tf.placeholder(tf.float64, name='dropout_rate')
+
+        logit_real = discriminator.build_discriminator(input_real, dropout_rate)
+        logit_fake = discriminator.build_discriminator(input_fake, dropout_rate)
+        init = tf.global_variables_initializer()
+
+        sess.run(init)
+        sess.run(logit_real, feed_dict={input_real: x, dropout_rate: 0.5})
+        sess.run(logit_fake, feed_dict={input_fake: x, dropout_rate: 0.5})

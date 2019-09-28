@@ -11,20 +11,20 @@ class CaptchaGenerator(AbsNeuralNetwork):
                                          filters=32,
                                          kernel_size=[4, 4],
                                          padding='same',
-                                         name='conv1',
-                                         activation=tf.nn.relu)
+                                         name='gen_conv1',
+                                         activation=tf.nn.relu,
+                                         trainable=True)
             gen_conv2 = tf.layers.conv2d(inputs=gen_conv1,
                                          filters=3,
                                          kernel_size=[5, 5],
                                          padding='same',
-                                         activation=tf.nn.relu)
+                                         name='gen_conv2',
+                                         activation=tf.nn.relu,
+                                         trainable=True)
             
             self.tf_nodes['x_placeholder'] = gen_x_placeholder
             self.tf_nodes['gen_conv1'] = gen_conv1
             self.tf_nodes['gen_conv2'] = gen_conv2
-
-            init = tf.global_variables_initializer()
-            self.sess.run(init)
 
     def get_faked_dataset(self, n_sample):
         features = self.generate_captcha(n_sample)

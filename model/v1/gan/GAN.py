@@ -10,56 +10,63 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
         self.generator = CaptchaGenerator(graph, sess)
         self.discriminator = CaptchaDiscriminator(graph, sess)
 
-    def train(self, X, learning_rate=0.001, dropout_rate=0.4, epoch=1, batch_size=8, **kwargs):
+    def train(self, X, learning_rate=0.001, dropout_rate=0.1, epoch=1, batch_size=8, **kwargs):
         X = self.reshape_features(X)
         n_batch = X.shape[0] / batch_size
-
-        input_real = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='input_real')
-        input_fake = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='input_fake')
-
-        disc_real = self.discriminator.build_discriminator(input_real)
-        disc_fake = self.discriminator.build_discriminator(input_fake)
-
-        # Build Loss
-        gen_loss = -tf.reduce_mean(tf.log(disc_fake))
-        disc_loss = -tf.reduce_mean(tf.log(disc_real) + tf.log(1. - disc_fake))
-
-        optimizer_gen = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        optimizer_disc = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
         # Training Variables for each optimizer
         # By default in TensorFlow, all variables are updated by each optimizer, so we
         # need to precise for each one of them the specific variables to update.
         # Generator Network Variables
 
-        gen_vars = [self.generator.tf_nodes['gen_conv1'], self.generator.tf_nodes['gen_conv2']]
+        with self.graph.as_default():
+            input_real = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='input_real')
+            input_fake = self.generator.tf_nodes['gen_conv2']
 
-        # Discriminator Network Variables
-        disc_vars = [
-            self.discriminator.tf_nodes['conv1'], self.discriminator.tf_nodes['pool1'],
-            self.discriminator.tf_nodes['conv2'], self.discriminator.tf_nodes['pool2'],
-            self.discriminator.tf_nodes['dense'], self.discriminator.tf_nodes['logits']
-        ]
+            learning_rate_placeholder = tf.placeholder(tf.float64, name='learning_rate')
+            dropout_rate_placeholder = tf.placeholder(tf.float64, name='dropout_rate')
 
-        # Create training operations
-        train_gen = optimizer_gen.minimize(gen_loss, var_list=gen_vars)
-        train_disc = optimizer_disc.minimize(disc_loss, var_list=disc_vars)
+            output_real = self.discriminator.build_discriminator(input_real, dropout_rate_placeholder, learning_rate_placeholder)
+            output_fake = self.discriminator.build_discriminator(input_fake, dropout_rate_placeholder, learning_rate_placeholder)
+            init = tf.global_variables_initializer()
 
-        init = tf.global_variables_initializer()
-        self.sess.run(init)
+            self.sess.run(init)
+            theta = 0.00001
+            gen_loss = -tf.reduce_mean(tf.log(output_fake) + theta)
+            disc_loss = -tf.reduce_mean(tf.log(output_real) + tf.log(1. - output_fake) + theta)
 
-        for i in range(epoch):
-            _, _, gen_cost, disc_cost = self.sess.run([train_gen, train_disc, gen_loss, disc_loss],
-                                                      feed_dict={
-                                                          input_real: X,
-                                                          disc_fake: self.generator.generate_captcha(X.shape[0]),
-                                                          self.discriminator.tf_nodes['learning_rate']: learning_rate,
-                                                          self.discriminator.tf_nodes['dropout_rate']: dropout_rate
-                                                      })
+            gen_vars = [node for node in graph._collections['trainable_variables'] if node.name.startswith('gen')]
+            disc_vars = [node for node in graph._collections['trainable_variables'] if node.name.startswith('disc')]
+
+            optimizer_gen = tf.train.AdamOptimizer(learning_rate=learning_rate)
+            optimizer_disc = tf.train.AdamOptimizer(learning_rate=learning_rate)
+
+            train_gen = optimizer_gen.minimize(gen_loss, var_list=gen_vars)
+            train_disc = optimizer_disc.minimize(disc_loss, var_list=disc_vars)
+
+            init = tf.global_variables_initializer()
+            self.sess.run(init)
+
+            for i in range(epoch):
+                _, _, gen_cost, disc_cost, ooutput_r, output_f = self.sess.run([train_gen, train_disc, disc_loss, gen_loss, output_real, output_fake],
+                                                          feed_dict={
+                                                              input_real: X,
+                                                              self.generator.tf_nodes['x_placeholder']: self.generator.generate_captcha(X.shape[0]),
+                                                              learning_rate_placeholder: learning_rate,
+                                                              dropout_rate_placeholder: dropout_rate
+                                                          })
+                print(output_f, ooutput_r)
+                print(gen_cost, disc_cost)
 
 
 if __name__ == '__main__':
+    from preprocess.load_data import get_data
+
+    x, y = get_data(pardir='/Users/shephexd/Documents/github/captcha_solver/data')
+    print(x, y)
+
     graph = tf.Graph()
     sess = tf.Session(graph=graph)
     gan = CaptchaGenAdvNet(graph=graph, sess=sess)
-
+    gan.train(X=x, epoch=20, learning_rate=0.0001)
+    print(gan)

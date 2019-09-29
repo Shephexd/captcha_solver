@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 from model.v1.network_template import AbsNeuralNetwork
 
 
@@ -21,7 +22,7 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
                                  activation=tf.nn.relu,
                                  reuse=tf.AUTO_REUSE)
         pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[5, 5], strides=5, name='disc_pool2')
-        pool2_flat = tf.reshape(pool2, [-1, 3 * 8 * 64])
+        pool2_flat = tf.reshape(pool2, [-1, np.prod([*self.feature_shape])])
 
         batch_normal = tf.layers.batch_normalization(pool2_flat, reuse=tf.AUTO_REUSE, name='disc_pool2')
         dense = tf.layers.dense(inputs=batch_normal, units=1024, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
@@ -53,8 +54,8 @@ if __name__ == '__main__':
     discriminator = CaptchaDiscriminator(graph=graph, sess=sess)
 
     with graph.as_default():
-        input_real = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='input_real')
-        input_fake = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='input_fake')
+        input_real = tf.placeholder(tf.float64, shape=(None, *discriminator.feature_shape), name='input_real')
+        input_fake = tf.placeholder(tf.float64, shape=(None, *discriminator.feature_shape), name='input_fake')
         dropout_rate = tf.placeholder(tf.float64, name='dropout_rate')
 
         logit_real = discriminator.build_discriminator(input_real, dropout_rate)

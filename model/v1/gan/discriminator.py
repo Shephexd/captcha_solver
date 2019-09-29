@@ -23,10 +23,12 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
         pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[5, 5], strides=5, name='disc_pool2')
         pool2_flat = tf.reshape(pool2, [-1, 3 * 8 * 64])
 
-        dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
+        batch_normal = tf.layers.batch_normalization(pool2_flat, reuse=tf.AUTO_REUSE, name='disc_pool2')
+        dense = tf.layers.dense(inputs=batch_normal, units=1024, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
         dropout = tf.layers.dropout(inputs=dense, rate=dropout_rate, name='disc_dropout', training=True)
 
-        logits = tf.layers.dense(inputs=dropout, units=1, name='disc_logits', reuse=tf.AUTO_REUSE)
+        logits = tf.layers.dense(inputs=dropout, units=2, name='disc_logits', reuse=tf.AUTO_REUSE)
+        outputs = tf.nn.softmax(logits)
 
         self.tf_nodes['learning_rate'] = learning_rate
         self.tf_nodes['dropout_rate'] = dropout_rate
@@ -37,22 +39,7 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
         self.tf_nodes['dense'] = dense
         self.tf_nodes['logits'] = logits
 
-        return logits
-
-    def train(self, X, batch_size):
-        with self.graph.as_default():
-            X = self.reshape_features(X)
-            n_batch = X.shape[0] / batch_size
-
-            x_placeholder = self.graph.get_tensor_by_name('inputs:0')
-            y_placeholder = self.graph.get_tensor_by_name('labels:0')
-
-            bs = self.graph.get_tensor_by_name('batch_size:0')
-            lr = self.graph.get_tensor_by_name('learning_rate:0')
-            dr = self.graph.get_tensor_by_name('dropout_rate:0')
-
-            training_step = self.graph.get_operation_by_name('training_step')
-            loss = self.graph.get_tensor_by_name('loss:0')
+        return outputs
 
 
 if __name__ == '__main__':

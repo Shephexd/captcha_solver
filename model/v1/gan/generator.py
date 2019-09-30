@@ -45,7 +45,7 @@ class CaptchaGenerator(AbsNeuralNetwork):
             raise RuntimeError("Train first to generate proper captcha")
             
         with self.graph.as_default():
-            rand_inputs = np.random.rand(n_sample, *self.feature_shape)
+            rand_inputs = np.random.normal(size=(n_sample, *self.feature_shape))
             rand_inputs = self.reshape_features(rand_inputs)
             return self.sess.run(self.tf_nodes['output'], feed_dict={self.tf_nodes['x_placeholder']: rand_inputs})
 

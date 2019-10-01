@@ -66,3 +66,9 @@ class AbsNeuralNetwork:
         if np.ndim(y) == 2:
             y = y.reshape(-1, 5, 10)
         return y
+
+    def get_tensor_shape(self, tensor):
+        return tensor.shape.as_list()
+
+    def get_flatten_size(self, tensor):
+        return np.prod([i for i in self.get_tensor_shape(tensor) if i])

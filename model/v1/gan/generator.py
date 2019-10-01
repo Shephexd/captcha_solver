@@ -39,11 +39,6 @@ class CaptchaGenerator(AbsNeuralNetwork):
             init = tf.global_variables_initializer()
             self.tf_nodes['init'] = init
 
-    def get_tensor_shape(self, tensor):
-        return tensor.shape.as_list()
-
-    def get_flatten_size(self, tensor):
-        return np.prod([i for i in self.get_tensor_shape(tensor) if i])
 
     def get_faked_dataset(self, n_sample):
         features = self.generate_captcha(n_sample)

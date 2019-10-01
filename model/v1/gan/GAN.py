@@ -77,7 +77,8 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
                                                                learning_rate_placeholder: learning_rate,
                                                                dropout_rate_placeholder: dropout_rate
                                                            })
-
+                    if n % 10 == 0:
+                        print(gen_cost, disc_cost, output_f[:5], output_r[:5])
                 if i % 2 == 0:
                     sample = self.generator.generate_captcha(1)
                     plt.imshow(sample.reshape(60, 160, 3))
@@ -93,6 +94,6 @@ if __name__ == '__main__':
     graph = tf.Graph()
     sess = tf.Session(graph=graph)
     gan = CaptchaGenAdvNet(graph=graph, sess=sess)
-    gan.train(X=x[:1100], epoch=60, learning_rate=0.0005, batch_size=50)
+    gan.train(X=x[:1100], epoch=60, learning_rate=0.001, batch_size=50)
     print(gan)
     import pdb;pdb.set_trace()

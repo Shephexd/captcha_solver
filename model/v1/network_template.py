@@ -14,6 +14,10 @@ class AbsNeuralNetwork:
     def is_runnable(self):
         return bool(self.sess)
 
+    @property
+    def feature_shape(self):
+        return (60, 160, 3)
+
     def build_graph(self):
         with self.graph.as_default():
             pass
@@ -52,7 +56,7 @@ class AbsNeuralNetwork:
             X = np.array(X)
             
         if np.ndim(X) == 3:
-            X = X.reshape(-1, 60, 160, 3)
+            X = X.reshape(-1, *self.feature_shape)
         return X
     
     def reshape_labels(self, y):
@@ -62,3 +66,9 @@ class AbsNeuralNetwork:
         if np.ndim(y) == 2:
             y = y.reshape(-1, 5, 10)
         return y
+
+    def get_tensor_shape(self, tensor):
+        return tensor.shape.as_list()
+
+    def get_flatten_size(self, tensor):
+        return np.prod([i for i in self.get_tensor_shape(tensor) if i])

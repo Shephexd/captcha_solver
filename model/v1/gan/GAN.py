@@ -24,7 +24,7 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
             batch_size_placeholder = tf.placeholder(tf.int64, name='batch_size')
 
             input_real = tf.placeholder(tf.float64, shape=(None, 60, 160, 3), name='input_real')
-            input_fake = self.generator.tf_nodes['gen_conv2']
+            input_fake = self.generator.tf_nodes['output']
 
             train_dataset = tf.data.Dataset.from_tensor_slices(tensors=(input_real))
             train_batch_dataset = train_dataset.batch(batch_size_placeholder).repeat()
@@ -64,16 +64,16 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
 
             for i in range(epoch):
                 for n in range(int(n_batch)):
-                    generated_fake = self.generator.generate_captcha(batch_size)
+                    generated_fake_noises = self.generator.generate_radom_noise(batch_size)
                     _, gen_cost, output_f = self.sess.run([train_gen, gen_loss, output_fake],
                                                           feed_dict={
-                                                              self.generator.tf_nodes['x_placeholder']: generated_fake,
+                                                              self.generator.tf_nodes['x_placeholder']: generated_fake_noises,
                                                               learning_rate_placeholder: learning_rate,
                                                               dropout_rate_placeholder: dropout_rate
                                                           })
                     _, disc_cost, output_r = self.sess.run([train_disc, gen_loss, output_real],
                                                            feed_dict={
-                                                               self.generator.tf_nodes['x_placeholder']: generated_fake,
+                                                               self.generator.tf_nodes['x_placeholder']: generated_fake_noises,
                                                                learning_rate_placeholder: learning_rate,
                                                                dropout_rate_placeholder: dropout_rate
                                                            })
@@ -94,6 +94,6 @@ if __name__ == '__main__':
     graph = tf.Graph()
     sess = tf.Session(graph=graph)
     gan = CaptchaGenAdvNet(graph=graph, sess=sess)
-    gan.train(X=x[:1100], epoch=60, learning_rate=0.001, batch_size=50)
+    gan.train(X=x[:10000], epoch=200, learning_rate=0.001, batch_size=100, dropout_rate=0.3)
     print(gan)
     import pdb;pdb.set_trace()

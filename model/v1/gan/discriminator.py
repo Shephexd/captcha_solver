@@ -1,5 +1,4 @@
 import tensorflow as tf
-import numpy as np
 from model.v1.network_template import AbsNeuralNetwork
 
 
@@ -13,7 +12,7 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
                                  activation=tf.nn.leaky_relu,
                                  reuse=tf.AUTO_REUSE)
         pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[4, 4], strides=2, name='disc_pool1')
-        normalized_pool1 = self.get_batch_norm(input_tensor=pool1, name='disc_bath_norm1')
+        normalized_pool1 = self.get_batch_norm(input_tensor=pool1, name='disc_norm_pool1', reuse=tf.AUTO_REUSE)
 
         conv2 = tf.layers.conv2d(inputs=normalized_pool1,
                                  filters=32,
@@ -23,7 +22,7 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
                                  activation=tf.nn.leaky_relu,
                                  reuse=tf.AUTO_REUSE)
         pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[4, 4], strides=2, name='disc_pool2')
-        normalized_pool2 = self.get_batch_norm(input_tensor=pool2, name='disc__norm_pool2')
+        normalized_pool2 = self.get_batch_norm(input_tensor=pool2, name='disc_norm_pool2', reuse=tf.AUTO_REUSE)
 
         conv3 = tf.layers.conv2d(inputs=normalized_pool2,
                                  filters=3,
@@ -32,8 +31,8 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
                                  name='disc_conv3',
                                  activation=tf.nn.leaky_relu,
                                  reuse=tf.AUTO_REUSE)
-        pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[4, 4], strides=2, name='disc_pool1')
-        normalized_pool3 = self.get_batch_norm(input_tensor=pool3, name='disc_norm__pool3', flatten=True)
+        pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[4, 4], strides=2, name='disc_pool3')
+        normalized_pool3 = self.get_batch_norm(input_tensor=pool3, name='disc_norm_pool3', flatten=True, reuse=tf.AUTO_REUSE)
 
         dense = tf.layers.dense(inputs=normalized_pool3, units=128, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
         dropout = tf.layers.dropout(inputs=dense, rate=dropout_rate, name='disc_dropout', training=True)

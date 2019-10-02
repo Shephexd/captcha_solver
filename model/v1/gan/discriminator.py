@@ -10,25 +10,32 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
                                  kernel_size=[5, 5],
                                  padding='same',
                                  name='disc_conv1',
-                                 activation=tf.nn.relu,
+                                 activation=tf.nn.leaky_relu,
                                  reuse=tf.AUTO_REUSE)
-        pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[4, 4], strides=4, name='disc_pool1')
-        pool1_flat = tf.reshape(pool1, [-1, self.get_flatten_size(pool1)])
-        pool1_batch_norm1_flatten = tf.layers.batch_normalization(pool1_flat, reuse=tf.AUTO_REUSE, name='disc_bath_norm1')
-        pool1_batch_norm1 = tf.reshape(pool1_batch_norm1_flatten, [-1, *self.get_tensor_shape(pool1)[1:]])
+        pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[4, 4], strides=2, name='disc_pool1')
+        normalized_pool1 = self.get_batch_norm(input_tensor=pool1, name='disc_bath_norm1')
 
-        conv2 = tf.layers.conv2d(inputs=pool1_batch_norm1,
-                                 filters=16,
+        conv2 = tf.layers.conv2d(inputs=normalized_pool1,
+                                 filters=32,
                                  kernel_size=[5, 5],
                                  padding='same',
                                  name='disc_conv2',
-                                 activation=tf.nn.relu,
+                                 activation=tf.nn.leaky_relu,
                                  reuse=tf.AUTO_REUSE)
-        pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[5, 5], strides=5, name='disc_pool2')
-        pool2_flat = tf.reshape(pool2, [-1, 3 * 8 * 16])
+        pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[4, 4], strides=2, name='disc_pool2')
+        normalized_pool2 = self.get_batch_norm(input_tensor=pool2, name='disc__norm_pool2')
 
-        batch_normal = tf.layers.batch_normalization(pool2_flat, reuse=tf.AUTO_REUSE, name='disc_pool2')
-        dense = tf.layers.dense(inputs=batch_normal, units=128, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
+        conv3 = tf.layers.conv2d(inputs=normalized_pool2,
+                                 filters=3,
+                                 kernel_size=[5, 5],
+                                 padding='same',
+                                 name='disc_conv3',
+                                 activation=tf.nn.leaky_relu,
+                                 reuse=tf.AUTO_REUSE)
+        pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[4, 4], strides=2, name='disc_pool1')
+        normalized_pool3 = self.get_batch_norm(input_tensor=pool3, name='disc_norm__pool3', flatten=True)
+
+        dense = tf.layers.dense(inputs=normalized_pool3, units=128, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
         dropout = tf.layers.dropout(inputs=dense, rate=dropout_rate, name='disc_dropout', training=True)
 
         logits = tf.layers.dense(inputs=dropout, units=2, name='disc_logits', reuse=tf.AUTO_REUSE)

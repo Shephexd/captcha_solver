@@ -8,28 +8,32 @@ class CaptchaGenerator(AbsNeuralNetwork):
         with self.graph.as_default():
             gen_x_placeholder = tf.placeholder(tf.float64, shape=(None, *self.feature_shape), name='gen_inputs')
             gen_conv1 = tf.layers.conv2d(inputs=gen_x_placeholder,
-                                         filters=4,
-                                         kernel_size=[4, 4],
+                                         filters=32,
+                                         kernel_size=[5, 5],
                                          padding='same',
                                          name='gen_conv1',
-                                         activation=tf.nn.relu,
+                                         activation=tf.nn.leaky_relu,
                                          trainable=True)
-            conv1_flat = tf.reshape(gen_conv1, [-1, self.get_flatten_size(gen_conv1)])
-            normalized_conv1_flat = tf.layers.batch_normalization(conv1_flat, name='gen_batch_norm1')
-            normalized_conv1 = tf.reshape(normalized_conv1_flat, [-1, *self.get_tensor_shape(gen_conv1)[1:]])
+            normalized_conv1 = self.get_batch_norm(input_tensor=gen_conv1, name='gen_batch_norm1')
+
             gen_conv2 = tf.layers.conv2d(inputs=normalized_conv1,
-                                         filters=3,
+                                         filters=32,
                                          kernel_size=[5, 5],
                                          padding='same',
                                          name='gen_conv2',
-                                         activation=tf.nn.relu,
+                                         activation=tf.nn.leaky_relu,
+                                         trainable=True)
+            normalized_conv2 = self.get_batch_norm(input_tensor=gen_conv2, name='gen_batch_norm2')
+
+            gen_conv3 = tf.layers.conv2d(inputs=normalized_conv2,
+                                         filters=3,
+                                         kernel_size=[5, 5],
+                                         padding='same',
+                                         name='gen_conv3',
+                                         activation=tf.nn.leaky_relu,
                                          trainable=True)
 
-            conv2_flat = tf.reshape(gen_conv2, [-1, self.get_flatten_size(gen_conv2)])
-            normalized_conv2_flat = tf.layers.batch_normalization(conv2_flat, name='gen_batch_norm2')
-            min_v = tf.reduce_min(normalized_conv2_flat)
-            max_v = tf.reduce_max(normalized_conv2_flat)
-            normalized_conv2_flat = (normalized_conv2_flat - min_v) / (max_v - min_v)
+            normalized_conv2_flat = self.get_batch_norm(input_tensor=gen_conv3, name='gen_batch_norm3', flatten=True)
             output = tf.reshape(normalized_conv2_flat, [-1, *self.feature_shape])
             
             self.tf_nodes['x_placeholder'] = gen_x_placeholder
@@ -38,7 +42,6 @@ class CaptchaGenerator(AbsNeuralNetwork):
             self.tf_nodes['output'] = output
             init = tf.global_variables_initializer()
             self.tf_nodes['init'] = init
-
 
     def get_faked_dataset(self, n_sample):
         features = self.generate_captcha(n_sample)

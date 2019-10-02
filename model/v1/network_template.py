@@ -15,6 +15,10 @@ class AbsNeuralNetwork:
         return bool(self.sess)
 
     @property
+    def flatten_feature_size(self):
+        return np.prod(self.feature_shape)
+
+    @property
     def feature_shape(self):
         return (60, 160, 3)
 
@@ -42,13 +46,11 @@ class AbsNeuralNetwork:
             pass
         
     def get_accuracy(self, labels, y_hat):
-        matched = (labels.argmax(axis=1) == y_hat)
-        y_hat.shape[1] == matched.sum(axis=1)
         return labels == y_hat
 
-    def get_batch_norm(self, input_tensor, name='', flatten=False):
+    def get_batch_norm(self, input_tensor, name='', flatten=False, reuse=False):
         conv_flatten = tf.reshape(input_tensor, [-1, self.get_flatten_size(input_tensor)])
-        normalized_conv = tf.layers.batch_normalization(conv_flatten, name=name)
+        normalized_conv = tf.layers.batch_normalization(conv_flatten, name=name, reuse=reuse)
         if not flatten:
             normalized_conv = tf.reshape(normalized_conv, [-1, *self.get_tensor_shape(input_tensor)[1:]])
         return normalized_conv

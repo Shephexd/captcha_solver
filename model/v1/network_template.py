@@ -45,7 +45,14 @@ class AbsNeuralNetwork:
         matched = (labels.argmax(axis=1) == y_hat)
         y_hat.shape[1] == matched.sum(axis=1)
         return labels == y_hat
-    
+
+    def get_batch_norm(self, input_tensor, name='', flatten=False):
+        conv_flatten = tf.reshape(input_tensor, [-1, self.get_flatten_size(input_tensor)])
+        normalized_conv = tf.layers.batch_normalization(conv_flatten, name=name)
+        if not flatten:
+            normalized_conv = tf.reshape(normalized_conv, [-1, *self.get_tensor_shape(input_tensor)[1:]])
+        return normalized_conv
+
     def reshape_inputs(self, X, y):
         X = self.reshape_features(X)
         y = self.reshape_labels(y)

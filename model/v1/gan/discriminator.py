@@ -35,7 +35,8 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
         normalized_pool3 = self.get_batch_norm(input_tensor=pool3, name='disc_norm_pool3', flatten=True, reuse=tf.AUTO_REUSE)
 
         dense = tf.layers.dense(inputs=normalized_pool3, units=128, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
-        dropout = tf.layers.dropout(inputs=dense, rate=dropout_rate, name='disc_dropout', training=True)
+        normalized_dense = self.get_batch_norm(input_tensor=dense, name='disc_fc_norm', flatten=True, reuse=tf.AUTO_REUSE)
+        dropout = tf.layers.dropout(inputs=normalized_dense, rate=dropout_rate, name='disc_dropout', training=True)
 
         logits = tf.layers.dense(inputs=dropout, units=2, name='disc_logits', reuse=tf.AUTO_REUSE)
         outputs = tf.nn.softmax(logits)

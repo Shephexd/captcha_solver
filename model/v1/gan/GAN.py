@@ -11,7 +11,7 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
         self.generator = CaptchaGenerator(graph, sess)
         self.discriminator = CaptchaDiscriminator(graph, sess)
 
-    def train(self, X, learning_rate=0.001, dropout_rate=0.1, epoch=1, batch_size=8, **kwargs):
+    def train(self, X, learning_rate=0.001, dropout_rate=0.1, epoch=1, batch_size=8, decay_rate=0.96, **kwargs):
         X = self.reshape_features(X)
         n_batch = X.shape[0] / batch_size
 
@@ -47,11 +47,18 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
             gen_vars = [node for node in graph._collections['trainable_variables'] if node.name.startswith('gen')]
             disc_vars = [node for node in graph._collections['trainable_variables'] if node.name.startswith('disc')]
 
-            optimizer_gen = tf.train.AdamOptimizer(learning_rate=learning_rate)
-            optimizer_disc = tf.train.AdamOptimizer(learning_rate=learning_rate)
+            global_step = tf.Variable(0, trainable=False)
+            optimized_learning_rate = tf.train.exponential_decay(learning_rate=learning_rate,
+                                                                 global_step=global_step,
+                                                                 decay_steps=n_batch,
+                                                                 decay_rate=decay_rate,
+                                                                 staircase=True
+                                                                 )
+            optimizer_gen = tf.train.AdamOptimizer(learning_rate=optimized_learning_rate)
+            optimizer_disc = tf.train.AdamOptimizer(learning_rate=optimized_learning_rate)
 
             train_gen = optimizer_gen.minimize(gen_loss, var_list=gen_vars)
-            train_disc = optimizer_disc.minimize(disc_loss, var_list=disc_vars)
+            train_disc = optimizer_disc.minimize(disc_loss, var_list=disc_vars, global_step=global_step)
 
             init = tf.global_variables_initializer()
             self.train_iter_init_op = iterator.make_initializer(train_batch_dataset)
@@ -77,6 +84,7 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
                                                                learning_rate_placeholder: learning_rate,
                                                                dropout_rate_placeholder: dropout_rate
                                                            })
+
                     if n % 10 == 0:
                         print(gen_cost, disc_cost, output_f[:5], output_r[:5])
                 if i % 2 == 0:

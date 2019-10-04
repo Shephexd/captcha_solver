@@ -40,7 +40,11 @@ class CaptchaGenerator(AbsNeuralNetwork):
                                          trainable=True)
 
             normalized_conv3_flat = self.get_batch_norm(input_tensor=gen_conv3, name='gen_batch_norm3', flatten=True)
-            output = tf.reshape(normalized_conv3_flat, [-1, *self.feature_shape])
+            reshaped_output = tf.reshape(normalized_conv3_flat, [-1, *self.feature_shape])
+
+            min_v = tf.reduce_min(reshaped_output)
+            max_v = tf.reduce_max(reshaped_output)
+            output = (reshaped_output - min_v) / (max_v - min_v)
             
             self.tf_nodes['x_placeholder'] = gen_x_placeholder
             self.tf_nodes['gen_conv1'] = gen_conv1
@@ -63,7 +67,6 @@ class CaptchaGenerator(AbsNeuralNetwork):
             
         with self.graph.as_default():
             rand_inputs = self.generate_radom_noise(n_samples=n_samples)
-            # 153600 values, but the requested shape requires a multiple of 28800
             return self.sess.run(self.tf_nodes['output'], feed_dict={self.tf_nodes['x_placeholder']: rand_inputs})
 
     def generate_faked_labels(self, n_sample):

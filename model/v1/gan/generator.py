@@ -43,19 +43,15 @@ class CaptchaGenerator(AbsNeuralNetwork):
                                          kernel_size=(16, 16),
                                          padding='same',
                                          name='gen_conv3',
-                                         activation=tf.nn.leaky_relu,
+                                         activation=tf.nn.sigmoid,
                                          trainable=True)
 
             reshaped_output = tf.reshape(gen_conv3, [-1, *self.feature_shape])
 
-            min_v = tf.reduce_min(reshaped_output)
-            max_v = tf.reduce_max(reshaped_output)
-            output = (reshaped_output - min_v) / (max_v - min_v)
-            
             self.tf_nodes['x_placeholder'] = gen_x_placeholder
             self.tf_nodes['gen_conv1'] = gen_conv1
             self.tf_nodes['gen_conv2'] = gen_conv2
-            self.tf_nodes['output'] = output
+            self.tf_nodes['output'] = reshaped_output
             init = tf.global_variables_initializer()
             self.tf_nodes['init'] = init
 

@@ -6,41 +6,47 @@ import numpy as np
 class CaptchaGenerator(AbsNeuralNetwork):
     def build_graph(self):
         with self.graph.as_default():
+            # 100 -> 4*4 * 1024 -> 8*8 * 512 -> 16 * 16 * 256 -> 32 *32 128 -> 64 * 64 * 3
+            # 100 -> 3 * 8 * 256 -> 15 * 40 * 128 -> 30 * 80 * 64 -> 60 * 160 * 3
             gen_x_placeholder = tf.placeholder(tf.float64, shape=(None, 100), name='gen_inputs')
-            input_dense = tf.layers.dense(inputs=gen_x_placeholder, units=self.flatten_feature_size,
+
+            input_dense = tf.layers.dense(inputs=gen_x_placeholder, units=600,
                                           activation=tf.nn.relu, name='gen_input_dense',
                                           reuse=tf.AUTO_REUSE)
+
             input_dense_norm = self.get_batch_norm(input_tensor=input_dense, name='gen_input_dense_norm1', flatten=True)
-            input_conv = tf.reshape(input_dense_norm, [-1, *self.feature_shape])
+            input_conv = tf.reshape(input_dense_norm, [-1, 15, 40, 1])
 
             gen_conv1 = tf.layers.conv2d(inputs=input_conv,
-                                         filters=32,
-                                         kernel_size=[5, 5],
+                                         filters=256,
+                                         kernel_size=(4, 4),
                                          padding='same',
                                          name='gen_conv1',
                                          activation=tf.nn.leaky_relu,
                                          trainable=True)
-            normalized_conv1 = self.get_batch_norm(input_tensor=gen_conv1, name='gen_batch_norm1')
 
-            gen_conv2 = tf.layers.conv2d(inputs=normalized_conv1,
-                                         filters=32,
-                                         kernel_size=[5, 5],
+            normalized_conv1 = self.get_batch_norm(input_tensor=gen_conv1, name='gen_batch_norm1')
+            gen_conv2_input = tf.reshape(normalized_conv1, [-1, 30, 80, 64])
+
+            gen_conv2 = tf.layers.conv2d(inputs=gen_conv2_input,
+                                         filters=128,
+                                         kernel_size=(8, 8),
                                          padding='same',
                                          name='gen_conv2',
                                          activation=tf.nn.leaky_relu,
                                          trainable=True)
             normalized_conv2 = self.get_batch_norm(input_tensor=gen_conv2, name='gen_batch_norm2')
+            gen_conv3_input = tf.reshape(normalized_conv2, [-1, 60, 160, 32])
 
-            gen_conv3 = tf.layers.conv2d(inputs=normalized_conv2,
+            gen_conv3 = tf.layers.conv2d(inputs=gen_conv3_input,
                                          filters=3,
-                                         kernel_size=[5, 5],
+                                         kernel_size=(16, 16),
                                          padding='same',
                                          name='gen_conv3',
                                          activation=tf.nn.leaky_relu,
                                          trainable=True)
 
-            normalized_conv3_flat = self.get_batch_norm(input_tensor=gen_conv3, name='gen_batch_norm3', flatten=True)
-            reshaped_output = tf.reshape(normalized_conv3_flat, [-1, *self.feature_shape])
+            reshaped_output = tf.reshape(gen_conv3, [-1, *self.feature_shape])
 
             min_v = tf.reduce_min(reshaped_output)
             max_v = tf.reduce_max(reshaped_output)

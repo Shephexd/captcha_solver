@@ -13,8 +13,6 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
         self.train_iter_init_op = None
 
     def train(self, X, learning_rate=0.001, dropout_rate=0.1, epoch=1, batch_size=8, decay_rate=0.96, **kwargs):
-        saver = tf.train.Saver()
-
         X = self.reshape_features(X)
         n_batch = X.shape[0] / batch_size
 
@@ -66,6 +64,7 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
             init = tf.global_variables_initializer()
             self.train_iter_init_op = iterator.make_initializer(train_batch_dataset)
 
+            saver = tf.train.Saver()
             self.sess.run(init)
             self.sess.run(self.train_iter_init_op,
                           feed_dict={

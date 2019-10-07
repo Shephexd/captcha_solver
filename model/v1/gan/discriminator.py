@@ -5,8 +5,8 @@ from model.v1.network_template import AbsNeuralNetwork
 class CaptchaDiscriminator(AbsNeuralNetwork):
     def build_discriminator(self, features, dropout_rate, learning_rate):
         conv1 = tf.layers.conv2d(inputs=features,
-                                 filters=32,
-                                 kernel_size=[5, 5],
+                                 filters=128,
+                                 kernel_size=[4, 4],
                                  padding='same',
                                  name='disc_conv1',
                                  activation=tf.nn.leaky_relu,
@@ -15,27 +15,27 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
         normalized_pool1 = self.get_batch_norm(input_tensor=pool1, name='disc_norm_pool1', reuse=tf.AUTO_REUSE)
 
         conv2 = tf.layers.conv2d(inputs=normalized_pool1,
-                                 filters=32,
+                                 filters=64,
                                  kernel_size=[5, 5],
                                  padding='same',
                                  name='disc_conv2',
                                  activation=tf.nn.leaky_relu,
                                  reuse=tf.AUTO_REUSE)
-        pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[4, 4], strides=2, name='disc_pool2')
+        pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[5, 5], strides=2, name='disc_pool2', padding='same')
         normalized_pool2 = self.get_batch_norm(input_tensor=pool2, name='disc_norm_pool2', reuse=tf.AUTO_REUSE)
 
         conv3 = tf.layers.conv2d(inputs=normalized_pool2,
-                                 filters=3,
-                                 kernel_size=[5, 5],
+                                 filters=32,
+                                 kernel_size=[8, 8],
                                  padding='same',
                                  name='disc_conv3',
                                  activation=tf.nn.leaky_relu,
                                  reuse=tf.AUTO_REUSE)
-        pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[4, 4], strides=2, name='disc_pool3')
+        pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[8, 8], strides=2, name='disc_pool3', padding='same')
         normalized_pool3 = self.get_batch_norm(input_tensor=pool3, name='disc_norm_pool3', flatten=True, reuse=tf.AUTO_REUSE)
 
         dense = tf.layers.dense(inputs=normalized_pool3, units=128, activation=tf.nn.relu, name='disc_fc', reuse=tf.AUTO_REUSE)
-        normalized_dense = self.get_batch_norm(input_tensor=dense, name='disc_fc_norm', flatten=True, reuse=tf.AUTO_REUSE)
+        normalized_dense = self.get_batch_norm(input_tensor=dense, name='disc_norm_dense', reuse=tf.AUTO_REUSE)
         dropout = tf.layers.dropout(inputs=normalized_dense, rate=dropout_rate, name='disc_dropout', training=True)
 
         logits = tf.layers.dense(inputs=dropout, units=2, name='disc_logits', reuse=tf.AUTO_REUSE)
@@ -55,9 +55,10 @@ class CaptchaDiscriminator(AbsNeuralNetwork):
 
 if __name__ == '__main__':
     from preprocess.load_data import get_data
-
-    x, y = get_data(pardir='/Users/shephexd/Documents/github/captcha_solver/data')
-    print(x, y)
+    import numpy as np
+    #x, y = get_data(pardir='/Users/shephexd/Documents/github/captcha_solver/data')
+    #print(x, y)
+    x = np.random.randn(3, 60, 160, 3)
 
     graph = tf.Graph()
     sess = tf.Session(graph=graph)
@@ -67,11 +68,12 @@ if __name__ == '__main__':
         input_real = tf.placeholder(tf.float64, shape=(None, *discriminator.feature_shape), name='input_real')
         input_fake = tf.placeholder(tf.float64, shape=(None, *discriminator.feature_shape), name='input_fake')
         dropout_rate = tf.placeholder(tf.float64, name='dropout_rate')
+        learning_rate = tf.placeholder(tf.float64, name='dropout_rate')
 
-        logit_real = discriminator.build_discriminator(input_real, dropout_rate)
-        logit_fake = discriminator.build_discriminator(input_fake, dropout_rate)
+        logit_real = discriminator.build_discriminator(input_real, dropout_rate, learning_rate)
+        logit_fake = discriminator.build_discriminator(input_fake, dropout_rate, learning_rate)
         init = tf.global_variables_initializer()
 
         sess.run(init)
-        sess.run(logit_real, feed_dict={input_real: x, dropout_rate: 0.5})
-        sess.run(logit_fake, feed_dict={input_fake: x, dropout_rate: 0.5})
+        print(sess.run(logit_real, feed_dict={input_real: x, dropout_rate: 0.5, learning_rate: 0.01}))
+        print(sess.run(logit_fake, feed_dict={input_fake: x, dropout_rate: 0.5, learning_rate: 0.01}))

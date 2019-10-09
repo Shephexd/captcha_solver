@@ -71,7 +71,7 @@ class CaptchaGenerator(AbsNeuralNetwork):
         return features, labels
 
     def generate_radom_noise(self, n_samples):
-        return np.random.normal(size=(n_samples, 100))
+        return np.random.normal(size=(n_samples, 100), scale=0.02)
 
     def generate_captcha(self, n_samples):
         if self.sess is None:

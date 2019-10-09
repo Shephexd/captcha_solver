@@ -10,43 +10,53 @@ class CaptchaGenerator(AbsNeuralNetwork):
             # 100 -> 3 * 8 * 256 -> 15 * 40 * 128 -> 30 * 80 * 64 -> 60 * 160 * 3
             gen_x_placeholder = tf.placeholder(tf.float64, shape=(None, 100), name='gen_inputs')
 
-            input_dense = tf.layers.dense(inputs=gen_x_placeholder, units=600,
+            input_dense = tf.layers.dense(inputs=gen_x_placeholder, units=192,
                                           activation=tf.nn.relu, name='gen_input_dense',
                                           reuse=tf.AUTO_REUSE)
 
             input_dense_norm = self.get_batch_norm(input_tensor=input_dense, name='gen_input_dense_norm1', flatten=True)
-            input_conv = tf.reshape(input_dense_norm, [-1, 15, 40, 1])
+            input_conv = tf.reshape(input_dense_norm, [-1, 3, 8, 8])
 
             gen_conv1 = tf.layers.conv2d(inputs=input_conv,
-                                         filters=256,
+                                         filters=64,
                                          kernel_size=(4, 4),
                                          padding='same',
                                          name='gen_conv1',
-                                         activation=tf.nn.leaky_relu,
+                                         activation=tf.nn.relu,
                                          trainable=True)
 
             normalized_conv1 = self.get_batch_norm(input_tensor=gen_conv1, name='gen_batch_norm1')
-            gen_conv2_input = tf.reshape(normalized_conv1, [-1, 30, 80, 64])
+            gen_conv2_input = tf.reshape(normalized_conv1, [-1, 6, 16, 16])
 
             gen_conv2 = tf.layers.conv2d(inputs=gen_conv2_input,
-                                         filters=128,
-                                         kernel_size=(8, 8),
+                                         filters=32,
+                                         kernel_size=(6, 6),
                                          padding='same',
                                          name='gen_conv2',
-                                         activation=tf.nn.leaky_relu,
+                                         activation=tf.nn.relu,
                                          trainable=True)
             normalized_conv2 = self.get_batch_norm(input_tensor=gen_conv2, name='gen_batch_norm2')
-            gen_conv3_input = tf.reshape(normalized_conv2, [-1, 60, 160, 32])
+            gen_conv3_input = tf.reshape(normalized_conv2, [-1, 12, 32, 8])
 
             gen_conv3 = tf.layers.conv2d(inputs=gen_conv3_input,
-                                         filters=3,
-                                         kernel_size=(16, 16),
+                                         filters=50,
+                                         kernel_size=(8, 8),
                                          padding='same',
                                          name='gen_conv3',
-                                         activation=tf.nn.sigmoid,
+                                         activation=tf.nn.relu,
+                                         trainable=True)
+            normalized_conv3 = self.get_batch_norm(input_tensor=gen_conv3, name='gen_batch_norm3')
+            gen_conv4_input = tf.reshape(normalized_conv3, [-1, 60, 160, 2])
+
+            gen_conv4 = tf.layers.conv2d(inputs=gen_conv4_input,
+                                         filters=3,
+                                         kernel_size=(12, 12),
+                                         padding='same',
+                                         name='gen_conv4',
+                                         activation=tf.nn.tanh,
                                          trainable=True)
 
-            reshaped_output = tf.reshape(gen_conv3, [-1, *self.feature_shape])
+            reshaped_output = tf.reshape(gen_conv4, [-1, *self.feature_shape])
 
             self.tf_nodes['x_placeholder'] = gen_x_placeholder
             self.tf_nodes['gen_conv1'] = gen_conv1
@@ -69,7 +79,8 @@ class CaptchaGenerator(AbsNeuralNetwork):
             
         with self.graph.as_default():
             rand_inputs = self.generate_radom_noise(n_samples=n_samples)
-            return self.sess.run(self.tf_nodes['output'], feed_dict={self.tf_nodes['x_placeholder']: rand_inputs})
+            output = self.sess.run(self.tf_nodes['output'], feed_dict={self.tf_nodes['x_placeholder']: rand_inputs})
+            return (output + 1) / 2
 
     def generate_faked_labels(self, n_sample):
         return self.generate_labels(n_sample, label_idx=0)

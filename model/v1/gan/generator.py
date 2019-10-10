@@ -4,66 +4,69 @@ import numpy as np
 
 
 class CaptchaGenerator(AbsNeuralNetwork):
-    def build_graph(self):
+    def build_graph(self, dropout_rate=0.4, **kwargs):
         with self.graph.as_default():
-            # 100 -> 4*4 * 1024 -> 8*8 * 512 -> 16 * 16 * 256 -> 32 *32 128 -> 64 * 64 * 3
-            # 100 -> 3 * 8 * 256 -> 15 * 40 * 128 -> 30 * 80 * 64 -> 60 * 160 * 3
-            gen_x_placeholder = tf.placeholder(tf.float64, shape=(None, 100), name='gen_inputs')
+            with tf.variable_scope("generator", reuse=tf.AUTO_REUSE):
+                # 100 -> 4*4 * 1024 -> 8*8 * 512 -> 16 * 16 * 256 -> 32 *32 128 -> 64 * 64 * 3
+                # 100 -> 3 * 8 * 256 -> 15 * 40 * 128 -> 30 * 80 * 64 -> 60 * 160 * 3
+                gen_x_placeholder = tf.placeholder(tf.float64, shape=(None, 100), name='gen_inputs')
 
-            input_dense = tf.layers.dense(inputs=gen_x_placeholder, units=192,
-                                          activation=tf.nn.relu, name='gen_input_dense',
-                                          reuse=tf.AUTO_REUSE)
+                input_dense = tf.layers.dense(inputs=gen_x_placeholder, units=192,
+                                              activation=tf.nn.relu, name='gen_input_dense',
+                                              reuse=tf.AUTO_REUSE)
 
-            input_dense_norm = self.get_batch_norm(input_tensor=input_dense, name='gen_input_dense_norm1', flatten=True)
-            input_conv = tf.reshape(input_dense_norm, [-1, 3, 8, 8])
+                input_dense_norm = self.get_batch_norm(input_tensor=input_dense, name='gen_input_dense_norm1', flatten=True)
+                input_conv = tf.reshape(input_dense_norm, [-1, 3, 8, 8])
+                gen_conv1 = tf.layers.conv2d(inputs=input_conv,
+                                             filters=64,
+                                             kernel_size=(4, 4),
+                                             padding='same',
+                                             name='gen_conv1',
+                                             activation=tf.nn.relu,
+                                             trainable=True)
 
-            gen_conv1 = tf.layers.conv2d(inputs=input_conv,
-                                         filters=64,
-                                         kernel_size=(4, 4),
-                                         padding='same',
-                                         name='gen_conv1',
-                                         activation=tf.nn.relu,
-                                         trainable=True)
+                normalized_conv1 = self.get_batch_norm(input_tensor=gen_conv1, name='gen_batch_norm1')
+                gen_conv2_input = tf.reshape(normalized_conv1, [-1, 6, 16, 16])
+                gen_conv2_input = tf.layers.dropout(inputs=gen_conv2_input, rate=dropout_rate, name='disc_dropout2')
 
-            normalized_conv1 = self.get_batch_norm(input_tensor=gen_conv1, name='gen_batch_norm1')
-            gen_conv2_input = tf.reshape(normalized_conv1, [-1, 6, 16, 16])
+                gen_conv2 = tf.layers.conv2d(inputs=gen_conv2_input,
+                                             filters=32,
+                                             kernel_size=(6, 6),
+                                             padding='same',
+                                             name='gen_conv2',
+                                             activation=tf.nn.relu,
+                                             trainable=True)
+                normalized_conv2 = self.get_batch_norm(input_tensor=gen_conv2, name='gen_batch_norm2')
+                gen_conv3_input = tf.reshape(normalized_conv2, [-1, 12, 32, 8])
+                gen_conv3_input = tf.layers.dropout(inputs=gen_conv3_input, rate=dropout_rate, name='disc_dropout3')
 
-            gen_conv2 = tf.layers.conv2d(inputs=gen_conv2_input,
-                                         filters=32,
-                                         kernel_size=(6, 6),
-                                         padding='same',
-                                         name='gen_conv2',
-                                         activation=tf.nn.relu,
-                                         trainable=True)
-            normalized_conv2 = self.get_batch_norm(input_tensor=gen_conv2, name='gen_batch_norm2')
-            gen_conv3_input = tf.reshape(normalized_conv2, [-1, 12, 32, 8])
+                gen_conv3 = tf.layers.conv2d(inputs=gen_conv3_input,
+                                             filters=50,
+                                             kernel_size=(8, 8),
+                                             padding='same',
+                                             name='gen_conv3',
+                                             activation=tf.nn.tanh,
+                                             trainable=True)
+                normalized_conv3 = self.get_batch_norm(input_tensor=gen_conv3, name='gen_batch_norm3')
+                gen_conv4_input = tf.reshape(normalized_conv3, [-1, 60, 160, 2])
+                gen_conv4_input = tf.layers.dropout(inputs=gen_conv4_input, rate=dropout_rate, name='disc_dropout4')
 
-            gen_conv3 = tf.layers.conv2d(inputs=gen_conv3_input,
-                                         filters=50,
-                                         kernel_size=(8, 8),
-                                         padding='same',
-                                         name='gen_conv3',
-                                         activation=tf.nn.relu,
-                                         trainable=True)
-            normalized_conv3 = self.get_batch_norm(input_tensor=gen_conv3, name='gen_batch_norm3')
-            gen_conv4_input = tf.reshape(normalized_conv3, [-1, 60, 160, 2])
+                gen_conv4 = tf.layers.conv2d(inputs=gen_conv4_input,
+                                             filters=3,
+                                             kernel_size=(12, 12),
+                                             padding='same',
+                                             name='gen_conv4',
+                                             activation=tf.nn.sigmoid,
+                                             trainable=True)
 
-            gen_conv4 = tf.layers.conv2d(inputs=gen_conv4_input,
-                                         filters=3,
-                                         kernel_size=(12, 12),
-                                         padding='same',
-                                         name='gen_conv4',
-                                         activation=tf.nn.tanh,
-                                         trainable=True)
+                reshaped_output = tf.reshape(gen_conv4, [-1, *self.feature_shape])
 
-            reshaped_output = tf.reshape(gen_conv4, [-1, *self.feature_shape])
-
-            self.tf_nodes['x_placeholder'] = gen_x_placeholder
-            self.tf_nodes['gen_conv1'] = gen_conv1
-            self.tf_nodes['gen_conv2'] = gen_conv2
-            self.tf_nodes['output'] = reshaped_output
-            init = tf.global_variables_initializer()
-            self.tf_nodes['init'] = init
+                self.tf_nodes['x_placeholder'] = gen_x_placeholder
+                self.tf_nodes['gen_conv1'] = gen_conv1
+                self.tf_nodes['gen_conv2'] = gen_conv2
+                self.tf_nodes['output'] = reshaped_output
+                init = tf.global_variables_initializer()
+                self.tf_nodes['init'] = init
 
     def get_faked_dataset(self, n_sample):
         features = self.generate_captcha(n_sample)
@@ -80,7 +83,9 @@ class CaptchaGenerator(AbsNeuralNetwork):
         with self.graph.as_default():
             rand_inputs = self.generate_radom_noise(n_samples=n_samples)
             output = self.sess.run(self.tf_nodes['output'], feed_dict={self.tf_nodes['x_placeholder']: rand_inputs})
-            return (output + 1) / 2
+            output = (output + 1) / 2
+            max_output, min_output = max(output), min(output)
+            return (output - min_output) / (max_output - min_output)
 
     def generate_faked_labels(self, n_sample):
         return self.generate_labels(n_sample, label_idx=0)

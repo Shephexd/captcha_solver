@@ -43,7 +43,7 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
                                                                  learning_rate_placeholder)
 
             gen_loss = -tf.reduce_mean(tf.log(output_fake))
-            disc_loss = -tf.reduce_mean(tf.log(output_real) + tf.log(1. - output_fake))
+            disc_loss = -tf.reduce_mean(tf.log(output_real) - tf.log( output_fake))
 
             gen_vars = [node for node in graph._collections['trainable_variables'] if node.name.startswith('gen')]
             disc_vars = [node for node in graph._collections['trainable_variables'] if node.name.startswith('disc')]
@@ -71,6 +71,9 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
                               input_real: X,
                               batch_size_placeholder: batch_size})
 
+            gen_cost, disc_cost = None, None
+            output_f, output_r = None, None
+
             for i in range(epoch):
                 for n in range(int(n_batch)):
                     generated_fake_noises = self.generator.generate_radom_noise(batch_size)
@@ -88,7 +91,15 @@ class CaptchaGenAdvNet(AbsNeuralNetwork):
                                                            })
 
                     if n % 10 == 0:
-                        print(gen_cost, disc_cost, output_f[:5], output_r[:5])
+                        if gen_cost and output_f:
+                            print("faked")
+                            print(gen_cost)
+                            print(output_f[:5])
+
+                        if disc_cost and output_r:
+                            print("disc")
+                            print(disc_cost)
+                            print(output_r[:5])
 
                 if i % 2 == 0:
                     saver.save(sess, "model/dcgan_model", global_step=global_step)

@@ -3,11 +3,11 @@ import tensorflow as tf
 
 
 class AbsNeuralNetwork:
-    def __init__(self, graph, sess):
+    def __init__(self, graph, sess, **kwargs):
         self.graph = graph
         self.sess = sess
         self.tf_nodes = dict()
-        self.build_graph()
+        self.build_graph(**kwargs)
         self.data_iter = None
 
     @property
@@ -22,10 +22,13 @@ class AbsNeuralNetwork:
     def feature_shape(self):
         return (60, 160, 3)
 
-    def build_graph(self):
+    def build_graph(self, **kwargs):
         with self.graph.as_default():
             pass
-        
+
+    def lrelu(self, x):
+        return tf.maximum(x, tf.multiply(x, 0.2))
+
     def calc_cost(self, y_hat, labels):
         cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=y_hat, labels=labels)
         loss = tf.reduce_sum(cross_entropy, name='loss')

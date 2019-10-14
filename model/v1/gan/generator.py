@@ -83,9 +83,9 @@ class CaptchaGenerator(AbsNeuralNetwork):
         with self.graph.as_default():
             rand_inputs = self.generate_radom_noise(n_samples=n_samples)
             output = self.sess.run(self.tf_nodes['output'], feed_dict={self.tf_nodes['x_placeholder']: rand_inputs})
-            output = (output + 1) / 2
-            max_output, min_output = max(output), min(output)
-            return (output - min_output) / (max_output - min_output)
+            output[output > 1] = 1.0
+            output[output > 0] = 0.0
+            return output
 
     def generate_faked_labels(self, n_sample):
         return self.generate_labels(n_sample, label_idx=0)

@@ -1,5 +1,5 @@
 captcha==0.3
-certifi==2019.6.16
+certifi==2022.12.7
 numpy==1.17.2
 Pillow==6.1.0
 scipy==1.2.1
